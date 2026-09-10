@@ -16,7 +16,7 @@ admins = {OWNER_ID}
 blocked_users = set()
 all_users = set()
 active_signal_users = set()
-user_states = {}  # Broadcast / Block এর ইনপুট ট্র্যাকিং করার জন্য
+user_states = {}  # Broadcast / Block ইনপুট ট্র্যাকিং
 
 # Channel Config
 REQUIRED_CHANNEL = "@your_channel_username" 
@@ -83,7 +83,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     all_users.add(user_id)
 
-    # এডমিন হলে সরাসরি এডমিন প্যানেল দেখানো হবে
     if user_id in admins:
         welcome_text = (
             "<b>👑 ADMIN CONTROL PANEL 👑</b>\n\n"
@@ -100,6 +99,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- BUTTON CLICK HANDLER ---
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global bot_active  # ফিক্সড: ফাংশনের শুরুতেই গ্লোবাল ডিক্লেয়ার করা হয়েছে
     query = update.callback_query
     user_id = query.from_user.id
 
@@ -114,7 +114,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     data = query.data
 
-    # --- USER BUTTONS ---
+    # USER BUTTONS
     if data == "check_join":
         subscribed = await is_user_subscribed(context.bot, user_id)
         if subscribed:
@@ -140,9 +140,8 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             active_signal_users.remove(user_id)
             await query.message.reply_text("🛑 <b>VIP Signal Stopped.</b>", parse_mode="HTML")
 
-    # --- ADMIN BUTTONS ---
+    # ADMIN BUTTONS
     elif user_id in admins:
-        global bot_active
         if data == "toggle_bot":
             bot_active = not bot_active
             if not bot_active:
@@ -176,7 +175,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif data == "admin_refresh":
             await query.edit_message_reply_markup(reply_markup=get_admin_keyboard())
 
-# --- TEXT MESSAGE HANDLER FOR ADMIN INPUTS ---
+# --- TEXT INPUTS FOR ADMIN ---
 async def handle_admin_inputs(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id not in admins:
@@ -215,7 +214,7 @@ async def handle_admin_inputs(update: Update, context: ContextTypes.DEFAULT_TYPE
         else:
             await update.message.reply_text("⚠️ সঠিক ID পাঠাননি।")
 
-# --- SIGNAL SENDER ---
+# --- LIVE SIGNAL SENDER ---
 async def send_live_signals(user_id: int, context: ContextTypes.DEFAULT_TYPE):
     while user_id in active_signal_users and user_id not in blocked_users and bot_active:
         now = datetime.now(timezone.utc)
@@ -250,7 +249,7 @@ def main():
     bot_app.add_handler(CallbackQueryHandler(button_click))
     bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_admin_inputs))
     
-    print("Bot is running without any issues...")
+    print("Bot is running...")
     bot_app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
