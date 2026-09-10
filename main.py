@@ -182,8 +182,8 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     admin_msg = (
         f"<b>🛠 ADMIN PANEL COMMANDS 🛠</b>\n"
         f"<b>Current Bot Status:</b> {status_str}\n\n"
-        "🔴 <code>/bot-off</code> - Turn OFF bot (Show Maintenance Notice)\n"
-        "🟢 <code>/bot-on</code> - Turn ON bot\n"
+        "🔴 <code>/bot_off</code> - Turn OFF bot (Show Maintenance Notice)\n"
+        "🟢 <code>/bot_on</code> - Turn ON bot\n"
         "📢 <code>/setchannel <url> <@username></code> - Change Join Channel\n"
         "✉️ <code>/broadcast <text></code> - Send notice to all users\n"
         "🚫 <code>/block <user_id></code> - Block user (No Response)\n"
@@ -285,10 +285,10 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_click))
 
-    # Admin Handlers
+    # Admin Handlers (Fixed commands without hyphen)
     app.add_handler(CommandHandler("admin", admin_panel))
-    app.add_handler(CommandHandler("bot-off", toggle_bot_off))
-    app.add_handler(CommandHandler("bot-on", toggle_bot_on))
+    app.add_handler(CommandHandler("bot_off", toggle_bot_off))
+    app.add_handler(CommandHandler("bot_on", toggle_bot_on))
     app.add_handler(CommandHandler("setchannel", set_channel))
     app.add_handler(CommandHandler("broadcast", broadcast))
     app.add_handler(CommandHandler("block", block_user))
