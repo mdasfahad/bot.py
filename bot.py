@@ -198,7 +198,7 @@ async def toggle_bot_off(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global bot_active
     if update.effective_user.id not in admins: return
     bot_active = False
-    active_signal_users.clear() # Stop all ongoing signals
+    active_signal_users.clear()
     await update.message.reply_text("🔴 <b>Bot Maintenance Mode ENABLED!</b> Users will now see the maintenance notice.", parse_mode="HTML")
 
 async def toggle_bot_on(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -302,21 +302,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-Build Command:  pip install -r requirements.txt
-
-
-
-
-Start Command:. python bot.py
-
-
-
-
-
-
-
-requirements.txt. python-telegram-bot
-flask
