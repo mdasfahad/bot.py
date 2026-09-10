@@ -8,15 +8,15 @@ from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler, ContextTypes
 )
 
-# --- FLASK WEB SERVER FOR KEEP-ALIVE ---
-app = Flask('')
+# --- FLASK KEEP-ALIVE SERVER ---
+web_app = Flask(__name__)
 
-@app.route('/')
+@web_app.route('/')
 def home():
-    return "Bot is Alive & Running 24/7!"
+    return "Bot is Running 24/7!"
 
 def run_web():
-    app.run(host='0.0.0.0', port=8080)
+    web_app.run(host='0.0.0.0', port=8080)
 
 def keep_alive():
     t = Thread(target=run_web)
@@ -27,8 +27,8 @@ def keep_alive():
 BOT_TOKEN = "8686418799:AAE8dI47h-kE_HotH7yy9FQLKDZ83AzVMxw"
 OWNER_ID = 8289191009
 
-# Global States & Stores
-bot_active = True  # Maintenance Mode Toggle
+# Global Data Stores
+bot_active = True
 admins = {OWNER_ID}
 blocked_users = set()
 all_users = set()
@@ -38,12 +38,11 @@ active_signal_users = set()
 REQUIRED_CHANNEL = "@your_channel_username" 
 CHANNEL_LINK = "https://t.me/+8UAIuuTjL4RlY2U1"
 
-# Maintenance Message
+# Maintenance Notice
 MAINTENANCE_MSG = (
     "⚠️ <b>বট সাময়িকভাবে বন্ধ আছে!</b>\n\n"
-    "আমাদের বটের কিছু কারিগরি কাজ (Maintenance) চলছে। "
-    "সাধারণত ২৪ থেকে ৪৮ ঘণ্টার মধ্যে সিস্টেম ঠিক হয়ে যাবে।\n"
-    "ধৈর্য ধরার জন্য ধন্যবাদ।"
+    "আমাদের বটের কারিগরি কাজ (Maintenance) চলছে। "
+    "খুব দ্রুতই সার্ভিস আবার চালু হবে।\nধৈর্য ধরার জন্য ধন্যবাদ।"
 )
 
 # --- SIGNAL GENERATOR ---
@@ -59,9 +58,9 @@ def get_signal_data():
         
     return period_number[-4:], sig_type, selected_num
 
-# --- FORCE JOIN CHECKER ---
+# --- SUBSCRIPTION CHECKER ---
 async def is_user_subscribed(bot, user_id):
-    if not REQUIRED_CHANNEL.startswith("@"):
+    if not REQUIRED_CHANNEL.startswith("@") or REQUIRED_CHANNEL == "@your_channel_username":
         return True
     try:
         member = await bot.get_chat_member(chat_id=REQUIRED_CHANNEL, user_id=user_id)
@@ -71,15 +70,13 @@ async def is_user_subscribed(bot, user_id):
         return True
     return False
 
-# --- COMMAND HANDLERS ---
+# --- USER COMMANDS ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
-    # 1. Blocked User Check (No Response)
     if user_id in blocked_users:
         return
 
-    # 2. Maintenance Mode Check
     if not bot_active and user_id not in admins:
         await update.message.reply_text(MAINTENANCE_MSG, parse_mode="HTML")
         return
@@ -106,13 +103,11 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user_id = query.from_user.id
 
-    # 1. Blocked User Check (No Response)
     if user_id in blocked_users:
         return
 
     await query.answer()
 
-    # 2. Maintenance Mode Check
     if not bot_active and user_id not in admins:
         await query.message.reply_text(MAINTENANCE_MSG, parse_mode="HTML")
         return
@@ -145,7 +140,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             active_signal_users.remove(user_id)
             await query.edit_message_text("🛑 <b>VIP Signal Stopped.</b>", parse_mode="HTML")
 
-# --- SIGNAL SENDER ---
+# --- SIGNAL SENDER (EVERY 30 SECONDS) ---
 async def send_live_signals(user_id: int, context: ContextTypes.DEFAULT_TYPE):
     while user_id in active_signal_users and user_id not in blocked_users and bot_active:
         now = datetime.now(timezone.utc)
@@ -172,7 +167,7 @@ async def send_live_signals(user_id: int, context: ContextTypes.DEFAULT_TYPE):
             active_signal_users.discard(user_id)
             break
 
-# --- ADMIN PANEL COMMANDS ---
+# --- ADMIN COMMANDS ---
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id not in admins: return
@@ -184,12 +179,12 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"<b>Current Bot Status:</b> {status_str}\n\n"
         "🔴 <code>/bot_off</code> - Turn OFF bot (Show Maintenance Notice)\n"
         "🟢 <code>/bot_on</code> - Turn ON bot\n"
-        "📢 <code>/setchannel <url> <@username></code> - Change Join Channel\n"
-        "✉️ <code>/broadcast <text></code> - Send notice to all users\n"
-        "🚫 <code>/block <user_id></code> - Block user (No Response)\n"
-        "✅ <code>/unblock <user_id></code> - Unblock user\n"
-        "👑 <code>/addadmin <user_id></code> - Add new admin\n"
-        "🔄 <code>/transferowner <user_id></code> - Transfer ownership\n"
+        "📢 <code>/setchannel &lt;url&gt; &lt;@username&gt;</code> - Change Join Channel\n"
+        "✉️ <code>/broadcast &lt;text&gt;</code> - Send notice to all users\n"
+        "🚫 <code>/block &lt;user_id&gt;</code> - Block user\n"
+        "✅ <code>/unblock &lt;user_id&gt;</code> - Unblock user\n"
+        "👑 <code>/addadmin &lt;user_id&gt;</code> - Add new admin\n"
+        "🔄 <code>/transferowner &lt;user_id&gt;</code> - Transfer ownership\n"
         "📊 <code>/stats</code> - Show total bot users"
     )
     await update.message.reply_text(admin_msg, parse_mode="HTML")
@@ -199,13 +194,13 @@ async def toggle_bot_off(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in admins: return
     bot_active = False
     active_signal_users.clear()
-    await update.message.reply_text("🔴 <b>Bot Maintenance Mode ENABLED!</b> Users will now see the maintenance notice.", parse_mode="HTML")
+    await update.message.reply_text("🔴 <b>Bot Maintenance Mode ENABLED!</b>", parse_mode="HTML")
 
 async def toggle_bot_on(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global bot_active
     if update.effective_user.id not in admins: return
     bot_active = True
-    await update.message.reply_text("🟢 <b>Bot is now ONLINE!</b> Users can use the bot normally.", parse_mode="HTML")
+    await update.message.reply_text("🟢 <b>Bot is now ONLINE!</b>", parse_mode="HTML")
 
 async def set_channel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global CHANNEL_LINK, REQUIRED_CHANNEL
@@ -239,7 +234,7 @@ async def block_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         uid = int(context.args[0])
         blocked_users.add(uid)
         active_signal_users.discard(uid)
-        await update.message.reply_text(f"🚫 User {uid} blocked! They will receive no response from now on.")
+        await update.message.reply_text(f"🚫 User {uid} blocked!")
 
 async def unblock_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in admins: return
@@ -275,30 +270,30 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML"
     )
 
-# --- MAIN ENGINE ---
+# --- MAIN RUNNER ---
 def main():
     keep_alive()
 
-    app = Application.builder().token(BOT_TOKEN).build()
+    bot_app = Application.builder().token(BOT_TOKEN).build()
     
     # User Handlers
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(button_click))
+    bot_app.add_handler(CommandHandler("start", start))
+    bot_app.add_handler(CallbackQueryHandler(button_click))
 
-    # Admin Handlers (Fixed commands without hyphen)
-    app.add_handler(CommandHandler("admin", admin_panel))
-    app.add_handler(CommandHandler("bot_off", toggle_bot_off))
-    app.add_handler(CommandHandler("bot_on", toggle_bot_on))
-    app.add_handler(CommandHandler("setchannel", set_channel))
-    app.add_handler(CommandHandler("broadcast", broadcast))
-    app.add_handler(CommandHandler("block", block_user))
-    app.add_handler(CommandHandler("unblock", unblock_user))
-    app.add_handler(CommandHandler("addadmin", add_admin))
-    app.add_handler(CommandHandler("transferowner", transfer_ownership))
-    app.add_handler(CommandHandler("stats", stats))
+    # Admin Handlers (অফ/অন করার জন্য সঠিক কম্যান্ড /bot_off ও /bot_on)
+    bot_app.add_handler(CommandHandler("admin", admin_panel))
+    bot_app.add_handler(CommandHandler("bot_off", toggle_bot_off))
+    bot_app.add_handler(CommandHandler("bot_on", toggle_bot_on))
+    bot_app.add_handler(CommandHandler("setchannel", set_channel))
+    bot_app.add_handler(CommandHandler("broadcast", broadcast))
+    bot_app.add_handler(CommandHandler("block", block_user))
+    bot_app.add_handler(CommandHandler("unblock", unblock_user))
+    bot_app.add_handler(CommandHandler("addadmin", add_admin))
+    bot_app.add_handler(CommandHandler("transferowner", transfer_ownership))
+    bot_app.add_handler(CommandHandler("stats", stats))
     
-    print("Bot Starting...")
-    app.run_polling(drop_pending_updates=True)
+    print("Bot Starting Successfully...")
+    bot_app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
     main()
